@@ -1,0 +1,24 @@
+<!-- File: public/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservas de Asientos - Cine</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>Reserva de Tickets - Cine</h1>
+    <div class="input-group">
+        <input type="text" id="usernameInput" placeholder="Ingresa nombre" required>
+        <label for="usernameInput">Ingresa nombre</label>
+    </div>
+    <div id="timerDisplay"></div>
+    <div id="seating"></div>
+    <button id="buyBtn" disabled>Comprar</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -205,3 +205,41 @@ h1 {
     font-size: 1.5rem;
   }
 }
+
+
+/* Tooltip personalizado */
+.seat[data-tooltip] {
+  position: relative;  /* Necesario para posicionar el tooltip */
+}
+
+.seat[data-tooltip]:hover::after {
+  content: attr(data-tooltip);  /* Muestra el contenido de data-tooltip */
+  position: absolute;
+  bottom: 120%;  /* Posición arriba del asiento; ajusta a top: 120% para abajo */
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2a2a4e;  /* Fondo oscuro para que combine con el tema */
+  color: #e0e0e0;  /* Texto claro */
+  padding: 8px 12px;  /* Padding para hacerlo más grande */
+  font-size: 1rem;  /* Tamaño de fuente más grande (ajusta a 1.2rem si quieres aún mayor) */
+  border-radius: 6px;  /* Bordes redondeados */
+  white-space: nowrap;  /* Evita que se rompa en líneas */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);  /* Sombra para profundidad */
+  z-index: 10;  /* Asegura que esté por encima de otros elementos */
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.seat[data-tooltip]::after {
+  opacity: 0;  /* Oculto por defecto */
+}
+
+.seat[data-tooltip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;  /* Flecha apuntando hacia abajo */
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: #2a2a4e;  /* Color de la flecha */
+}

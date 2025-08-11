@@ -1,4 +1,3 @@
-// File: public/script.js
 const socket = io();
 const usernameInput = document.getElementById('usernameInput');
 const seating = document.getElementById('seating');
@@ -6,9 +5,9 @@ const buyBtn = document.getElementById('buyBtn');
 const timerDisplay = document.getElementById('timerDisplay');
 
 let seats = {};
-let selectedSeats = new Set(); // Changed from selectSeat to avoid confusion
+let selectedSeats = new Set();
 let timerInterval = null;
-let reservationEndTime = 0; // Fixed typo from resevationEndTime
+let reservationEndTime = 0;
 
 // Crear los asientos dinámicamente
 function createSeats() {
@@ -36,17 +35,17 @@ function createSeats() {
           selectedSeats.delete(seatId);
           div.classList.remove('reserved');
           socket.emit('release', seatId);
+          updateTotal(); // Added updateTotal call
         } else {
           // Seleccionar el asiento y reservarlo
           selectedSeats.add(seatId);
           div.classList.add('reserved');
           socket.emit('reserve', seatId);
+          updateTotal(); // Added updateTotal call
         }
 
-        // Replaced selectSeat(seatId) with inline logic
-        buyBtn.disabled = selectedSeats.size === 0; // Enable/disable buy button
-        if (selectedSeats.size === 0) stopTimer(); // Stop timer if no seats selected
-        // selectSeat(seatId); // Kept as comment per engineer's requirement
+        buyBtn.disabled = selectedSeats.size === 0;
+        if (selectedSeats.size === 0) stopTimer();
       });
 
       seating.appendChild(div);
@@ -56,15 +55,37 @@ function createSeats() {
 
 createSeats();
 
+let prices = { 'A': 6, 'B': 5, 'C': 4 };
+
+function updateTotal() {
+  let total = 0;
+  let breakdown = [];
+  selectedSeats.forEach(seatId => {
+    const row = seatId[0];
+    const price = prices[row];
+    total += price;
+    breakdown.push(`${seatId}: $${price}`);
+  });
+  document.getElementById('totalPrice').innerText = total > 0 ? `Total: $${total}` : '';
+  return { total, breakdown };
+}
+
 // Recibir el estado inicial de los asientos desde el servidor
 socket.on('init', (serverSeats) => {
   seats = serverSeats;
   Object.entries(serverSeats).forEach(([id, info]) => {
     const seat = document.getElementById(id);
     if (seat) {
-      seat.classList.remove('reserved', 'sold'); // Reset classes
-      if (info.status === 'reserved') seat.classList.add('reserved');
-      if (info.status === 'sold') seat.classList.add('sold');
+      seat.classList.remove('reserved', 'sold');
+      seat.dataset.tooltip = '';
+      if (info.status === 'reserved') {
+        seat.classList.add('reserved');
+        seat.dataset.tooltip = `Reservado por: ${info.user}`;
+      }
+      if (info.status === 'sold') {
+        seat.classList.add('sold');
+        seat.dataset.tooltip = `Vendido a: ${info.user}`;
+      }
     }
   });
 });
@@ -75,6 +96,7 @@ socket.on('reserved', ({ seatId, user, expiresAt }) => {
   const seat = document.getElementById(seatId);
   if (seat) {
     seat.classList.add('reserved');
+    seat.dataset.tooltip = `Reservado por: ${user}`;
   }
   if (user === usernameInput.value.trim()) {
     reservationEndTime = expiresAt;
@@ -88,6 +110,21 @@ socket.on('release', (seatId) => {
   const seat = document.getElementById(seatId);
   if (seat) {
     seat.classList.remove('reserved');
+    seat.dataset.tooltip = '';
+  }
+  if (selectedSeats.has(seatId)) {
+    selectedSeats.delete(seatId);
+    stopTimer();
+  }
+});
+
+socket.on('sold', ({ seatId, user }) => {
+  seats[seatId] = { status: 'sold', user, expiresAt: 0 };
+  const seat = document.getElementById(seatId);
+  if (seat) {
+    seat.classList.remove('reserved');
+    seat.classList.add('sold');
+    seat.dataset.tooltip = `Vendido a: ${user}`;
   }
   if (selectedSeats.has(seatId)) {
     selectedSeats.delete(seatId);
@@ -111,16 +148,21 @@ socket.on('buy', (seatId) => {
 // Comprar los asientos seleccionados
 buyBtn.addEventListener('click', () => {
   if (selectedSeats.size > 0) {
-    socket.emit('buy', Array.from(selectedSeats));
-    selectedSeats.clear();
-    buyBtn.disabled = true;
-    stopTimer();
+    const { total, breakdown } = updateTotal();
+    const confirmMsg = `Confirma compra:\n${breakdown.join('\n')}\nTotal: $${total}`;
+    if (confirm(confirmMsg)) {
+      socket.emit('buy', Array.from(selectedSeats));
+      selectedSeats.clear();
+      buyBtn.disabled = true;
+      stopTimer();
+      updateTotal();
+    }
   }
 });
 
 // Mostrar el temporizador de reserva
 function startTimer() {
-  stopTimer(); // Detener cualquier temporizador previo
+  stopTimer();
   timerInterval = setInterval(() => {
     const now = Date.now();
     const diff = Math.max(0, Math.floor((reservationEndTime - now) / 1000));
@@ -129,7 +171,6 @@ function startTimer() {
       stopTimer();
       selectedSeats.clear();
       buyBtn.disabled = true;
-      // Update UI for expired seats
       Object.keys(seats).forEach(seatId => {
         if (seats[seatId].status === 'available') {
           const seat = document.getElementById(seatId);
@@ -147,4 +188,3 @@ function stopTimer() {
     timerDisplay.innerText = '';
   }
 }
-

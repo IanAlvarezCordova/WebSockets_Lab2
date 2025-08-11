@@ -18,6 +18,10 @@ let seats = {};
   }
 });
 
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/admin.html'));
+});
+
 io.on('connection', (socket) => {
   console.log('Nuevo cliente conectado');
   socket.emit('init', seats);
@@ -25,6 +29,24 @@ io.on('connection', (socket) => {
   socket.on('setUsername', (username) => {
     socket.username = username || 'Anónimo';
   });
+
+  socket.on('admin_release_all', () => {
+    Object.keys(seats).forEach(seatId => {
+      if (seats[seatId].status === 'reserved') {
+        seats[seatId] = { status: 'available', user: '', expiresAt: 0 };
+        io.emit('release', seatId);
+      }
+    });
+  });
+
+  socket.on('admin_reset', () => {
+    ['A', 'B', 'C'].forEach(row => {
+      for (let i = 1; i <= 10; i++) {
+        seats[`${row}${i}`] = { status: 'available', user: '', expiresAt: 0 };
+      }
+    });
+    io.emit('init', seats);
+  });  
 
   socket.on('reserve', (seatId) => {
     const seat = seats[seatId];
@@ -56,10 +78,12 @@ io.on('connection', (socket) => {
       const seat = seats[seatId];
       if (seat && seat.status === 'reserved' && seat.user === socket.username) {
         seats[seatId] = { status: 'sold', user: socket.username, expiresAt: 0 };
-        io.emit('buy', seatId);
+        io.emit('sold', { seatId, user: seat.user });  // Cambiado a 'sold' con user
       }
     });
   });
+
+  
 
   socket.on('disconnect', () => {
     console.log('Cliente desconectado');
